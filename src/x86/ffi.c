@@ -511,6 +511,7 @@ ffi_prep_closure_loc (ffi_closure* closure,
   char *tramp = closure->tramp;
   void (*dest)(void);
   int op = 0xb8;  /* movl imm, %eax */
+  int offset = FFI_TRAMPOLINE_SIZE == 16 ? 4: 0;
 
   switch (cif->abi)
     {
@@ -531,13 +532,19 @@ ffi_prep_closure_loc (ffi_closure* closure,
       return FFI_BAD_ABI;
     }
 
+#if FFI_TRAMPOLINE_SIZE == 16
+  /* endbr32.  */
+  *(UINT32 *) tramp = 0xfb1e0ff3;
+#endif
+
   /* movl or pushl immediate.  */
-  tramp[0] = op;
-  *(void **)(tramp + 1) = codeloc;
+  tramp[offset] = op;
+  *(void **)(tramp + offset + 1) = codeloc;
 
   /* jmp dest */
-  tramp[5] = 0xe9;
-  *(unsigned *)(tramp + 6) = (unsigned)dest - ((unsigned)codeloc + 10);
+  tramp[offset + 5] = 0xe9;
+  *(unsigned *)(tramp + offset + 6)
+    = (unsigned)dest - ((unsigned)codeloc + 10);
 
   closure->cif = cif;
   closure->fun = fun;

@@ -47,6 +47,7 @@
 	FFI_HIDDEN(ffi_call_unix64)
 
 ffi_call_unix64:
+	_CET_ENDBR
 	cfi_startproc
 	movq	(%rsp), %r10		/* Load return address.  */
 	leaq	(%rdi, %rsi), %rax	/* Find local stack base.  */
@@ -127,55 +128,69 @@ ffi_call_unix64:
 
 	.align 2
 .Lst_void:
+	_CET_ENDBR
 	ret
 	.align 2
 
 .Lst_uint8:
+	_CET_ENDBR
 	movzbq	%al, %rax
 	movq	%rax, (%rdi)
 	ret
 	.align 2
 .Lst_sint8:
+	_CET_ENDBR
 	movsbq	%al, %rax
 	movq	%rax, (%rdi)
 	ret
 	.align 2
 .Lst_uint16:
+	_CET_ENDBR
 	movzwq	%ax, %rax
 	movq	%rax, (%rdi)
+	ret
 	.align 2
 .Lst_sint16:
+	_CET_ENDBR
 	movswq	%ax, %rax
 	movq	%rax, (%rdi)
 	ret
 	.align 2
 .Lst_uint32:
+	_CET_ENDBR
 	movl	%eax, %eax
 	movq	%rax, (%rdi)
+	ret
 	.align 2
 .Lst_sint32:
+	_CET_ENDBR
 	cltq
 	movq	%rax, (%rdi)
 	ret
 	.align 2
 .Lst_int64:
+	_CET_ENDBR
 	movq	%rax, (%rdi)
 	ret
 
 	.align 2
 .Lst_float:
+	_CET_ENDBR
 	movss	%xmm0, (%rdi)
 	ret
 	.align 2
 .Lst_double:
+	_CET_ENDBR
 	movsd	%xmm0, (%rdi)
 	ret
 .Lst_ldouble:
+	_CET_ENDBR
 	fstpt	(%rdi)
 	ret
 
 	.align 2
 .Lst_struct:
+	_CET_ENDBR
 	leaq	-20(%rsp), %rsi		/* Scratch area in redzone.  */
 
 	/* We have to locate the values now, and since we don't want to
@@ -238,6 +253,7 @@ ffi_call_unix64:
 
 ffi_closure_unix64_sse:
 	cfi_startproc
+	_CET_ENDBR
 	subq	$ffi_closure_FS, %rsp
 	cfi_adjust_cfa_offset(ffi_closure_FS)
 
@@ -261,6 +277,7 @@ ffi_closure_unix64_sse:
 
 ffi_closure_unix64:
 	cfi_startproc
+	_CET_ENDBR
 	subq	$ffi_closure_FS, %rsp
 	cfi_adjust_cfa_offset(ffi_closure_FS)
 0:
@@ -313,40 +330,49 @@ ffi_closure_unix64:
 
 	.align 2
 .Lld_void:
+	_CET_ENDBR
 	ret
 
 	.align 2
 .Lld_int8:
+	_CET_ENDBR
 	movzbl	ffi_closure_RED_RVALUE(%rsp), %eax
 	ret
 	.align 2
 .Lld_int16:
+	_CET_ENDBR
 	movzwl	ffi_closure_RED_RVALUE(%rsp), %eax
 	ret
 	.align 2
 .Lld_int32:
+	_CET_ENDBR
 	movl	ffi_closure_RED_RVALUE(%rsp), %eax
 	ret
 	.align 2
 .Lld_int64:
+	_CET_ENDBR
 	movq	ffi_closure_RED_RVALUE(%rsp), %rax
 	ret
 
 	.align 2
 .Lld_float:
+	_CET_ENDBR
 	movss	ffi_closure_RED_RVALUE(%rsp), %xmm0
 	ret
 	.align 2
 .Lld_double:
+	_CET_ENDBR
 	movsd	ffi_closure_RED_RVALUE(%rsp), %xmm0
 	ret
 	.align 2
 .Lld_ldouble:
+	_CET_ENDBR
 	fldt	ffi_closure_RED_RVALUE(%rsp)
 	ret
 
 	.align 2
 .Lld_struct:
+	_CET_ENDBR
 	/* There are four possibilities here, %rax/%rdx, %xmm0/%rax,
 	   %rax/%xmm0, %xmm0/%xmm1.  We collapse two by always loading
 	   both rdx and xmm1 with the second word.  For the remaining,

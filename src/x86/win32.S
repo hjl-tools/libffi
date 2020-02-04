@@ -482,7 +482,7 @@ cd_epilogue:
         pop   ebp
         pop   ecx
         pop   edx
-        mov   ecx, DWORD PTR [ecx + (CLOSURE_CIF_OFFSET-10)]
+        mov   ecx, DWORD PTR [ecx + (CLOSURE_CIF_OFFSET-FFI_TRAMPOLINE_SIZE)]
         add   esp, DWORD PTR [ecx + CIF_BYTES_OFFSET]
         mov   ecx, DWORD PTR [ecx + CIF_ABI_OFFSET]
         cmp   ecx, 3
@@ -608,46 +608,55 @@ USCORE_SYMBOL(ffi_call_win32):
 
 	/* Sign/zero extend as appropriate.  */
 .Lretsint8:
+	_CET_ENDBR
 	movsbl	%al, %eax
 	jmp	.Lretint
 
 .Lretsint16:
+	_CET_ENDBR
 	movswl	%ax, %eax
 	jmp	.Lretint
 
 .Lretuint8:
+	_CET_ENDBR
 	movzbl	%al, %eax
 	jmp	.Lretint
 
 .Lretuint16:
+	_CET_ENDBR
 	movzwl	%ax, %eax
 	jmp	.Lretint
 
 .Lretint:
+	_CET_ENDBR
         # Load %ecx with the pointer to storage for the return value
         movl  28(%ebp),%ecx
         movl  %eax,0(%ecx)
         jmp   .Lepilogue
  
 .Lretfloat:
+	_CET_ENDBR
          # Load %ecx with the pointer to storage for the return value
         movl  28(%ebp),%ecx
         fstps (%ecx)
         jmp   .Lepilogue
  
 .Lretdouble:
+	_CET_ENDBR
         # Load %ecx with the pointer to storage for the return value
         movl  28(%ebp),%ecx
         fstpl (%ecx)
         jmp   .Lepilogue
  
 .Lretlongdouble:
+	_CET_ENDBR
         # Load %ecx with the pointer to storage for the return value
         movl  28(%ebp),%ecx
         fstpt (%ecx)
         jmp   .Lepilogue
  
 .Lretint64:
+	_CET_ENDBR
         # Load %ecx with the pointer to storage for the return value
         movl  28(%ebp),%ecx
         movl  %eax,0(%ecx)
@@ -655,18 +664,21 @@ USCORE_SYMBOL(ffi_call_win32):
 	jmp   .Lepilogue
 
 .Lretstruct1b:
+	_CET_ENDBR
         # Load %ecx with the pointer to storage for the return value
         movl  28(%ebp),%ecx
         movb  %al,0(%ecx)
         jmp   .Lepilogue
  
 .Lretstruct2b:
+	_CET_ENDBR
         # Load %ecx with the pointer to storage for the return value
         movl  28(%ebp),%ecx
         movw  %ax,0(%ecx)
         jmp   .Lepilogue
 
 .Lretstruct4b:
+	_CET_ENDBR
         # Load %ecx with the pointer to storage for the return value
         movl  28(%ebp),%ecx
         movl  %eax,0(%ecx)
@@ -677,6 +689,17 @@ USCORE_SYMBOL(ffi_call_win32):
  
 .Lnoretval:
 .Lepilogue:
+	_CET_ENDBR
+#ifdef __CET__
+	/* Pop shadow stack by 1 frame.  */
+	xorl %ecx, %ecx
+	rdsspd %ecx
+	testl %ecx, %ecx
+	jz 1f
+	movl $1, %ecx
+	incsspd %ecx
+1:
+#endif
         movl %ebp,%esp
         popl %ebp
         ret
@@ -1006,6 +1029,7 @@ FFI_HIDDEN(ffi_closure_STDCALL)
 USCORE_SYMBOL(ffi_closure_STDCALL):
 .ffi_closure_STDCALL_internal:
 .LFB5:
+	_CET_ENDBR
 	pushl	%ebp
 .LCFI9:
 	movl	%esp, %ebp
@@ -1062,51 +1086,63 @@ USCORE_SYMBOL(ffi_closure_STDCALL):
 
 	/* Sign/zero extend as appropriate.  */
 .Lscls_retsint8:
+	_CET_ENDBR
 	movsbl	(%ecx), %eax
 	jmp	.Lscls_epilogue
 
 .Lscls_retsint16:
+	_CET_ENDBR
 	movswl	(%ecx), %eax
 	jmp	.Lscls_epilogue
 
 .Lscls_retuint8:
+	_CET_ENDBR
 	movzbl	(%ecx), %eax
 	jmp	.Lscls_epilogue
 
 .Lscls_retuint16:
+	_CET_ENDBR
 	movzwl	(%ecx), %eax
 	jmp	.Lscls_epilogue
 
 .Lscls_retint:
+	_CET_ENDBR
 	movl	(%ecx), %eax
 	jmp	.Lscls_epilogue
 
 .Lscls_retfloat:
+	_CET_ENDBR
 	flds	(%ecx)
 	jmp	.Lscls_epilogue
 
 .Lscls_retdouble:
+	_CET_ENDBR
 	fldl	(%ecx)
 	jmp	.Lscls_epilogue
 
 .Lscls_retldouble:
+	_CET_ENDBR
 	fldt	(%ecx)
 	jmp	.Lscls_epilogue
 
 .Lscls_retllong:
+	_CET_ENDBR
 	movl	(%ecx), %eax
 	movl	4(%ecx), %edx
 	jmp	.Lscls_epilogue
 
 .Lscls_retstruct1:
+	_CET_ENDBR
 	movsbl	(%ecx), %eax
 	jmp	.Lscls_epilogue
 
 .Lscls_retstruct2:
+	_CET_ENDBR
 	movswl	(%ecx), %eax
 	jmp	.Lscls_epilogue
 
 .Lscls_retstruct4:
+	_CET_ENDBR
 	movl	(%ecx), %eax
 	jmp	.Lscls_epilogue
 
@@ -1115,11 +1151,12 @@ USCORE_SYMBOL(ffi_closure_STDCALL):
 
 .Lscls_noretval:
 .Lscls_epilogue:
+	_CET_ENDBR
 	movl	%ebp, %esp
 	popl	%ebp
 	popl	%ecx
 	popl	%edx
-	movl	(CLOSURE_CIF_OFFSET-10)(%ecx), %ecx
+	movl	(CLOSURE_CIF_OFFSET-FFI_TRAMPOLINE_SIZE)(%ecx), %ecx
 	addl	CIF_BYTES_OFFSET(%ecx), %esp
 	movl	CIF_ABI_OFFSET(%ecx), %ecx
 	cmpl	$3, %ecx /* FFI_THISCALL */
@@ -1129,7 +1166,7 @@ USCORE_SYMBOL(ffi_closure_STDCALL):
 
 	addl	$4, %esp
 1:	addl	$4, %esp
-2:	jmp	*%edx
+2:	_CET_NOTRACK jmp *%edx
 .ffi_closure_STDCALL_end:
 .LFE5:
 

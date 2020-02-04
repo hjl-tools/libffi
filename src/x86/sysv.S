@@ -25,11 +25,11 @@
    DEALINGS IN THE SOFTWARE.
    ----------------------------------------------------------------------- */
 
-#ifndef __x86_64__
-
 #define LIBFFI_ASM	
 #include <fficonfig.h>
 #include <ffi.h>
+
+#ifndef __x86_64__
 
 .text
 
@@ -41,6 +41,7 @@
 
 ffi_call_SYSV:
 .LFB1:
+	_CET_ENDBR
         pushl %ebp
 .LCFI0:
         movl  %esp,%ebp
@@ -109,40 +110,48 @@ ffi_call_SYSV:
 
 	/* Sign/zero extend as appropriate.  */
 retsint8:
+	_CET_ENDBR
 	movsbl  %al, %eax
 	jmp  retint
 
 retsint16:
+	_CET_ENDBR
 	movswl  %ax, %eax
 	jmp  retint
 
 retuint8:
+	_CET_ENDBR
 	movzbl  %al, %eax
 	jmp  retint
 
 retuint16:
+	_CET_ENDBR
 	movzwl  %ax, %eax
 	jmp  retint
 
 retfloat:
+	_CET_ENDBR
 	/* Load %ecx with the pointer to storage for the return value  */
 	movl  24(%ebp),%ecx	
 	fstps (%ecx)
 	jmp   epilogue
 
 retdouble:
+	_CET_ENDBR
 	/* Load %ecx with the pointer to storage for the return value  */
 	movl  24(%ebp),%ecx	
 	fstpl (%ecx)
 	jmp   epilogue
 
 retlongdouble:
+	_CET_ENDBR
 	/* Load %ecx with the pointer to storage for the return value  */
 	movl  24(%ebp),%ecx	
 	fstpt (%ecx)
 	jmp   epilogue
 	
 retint64:	
+	_CET_ENDBR
 	/* Load %ecx with the pointer to storage for the return value  */
 	movl  24(%ebp),%ecx	
 	movl  %eax,0(%ecx)
@@ -150,6 +159,7 @@ retint64:
 	jmp   epilogue
 	
 retint:
+	_CET_ENDBR
 	/* Load %ecx with the pointer to storage for the return value  */
 	movl  24(%ebp),%ecx	
 	movl  %eax,0(%ecx)
@@ -159,6 +169,17 @@ retstruct:
 
 noretval:
 epilogue:
+	_CET_ENDBR
+#ifdef __CET__
+	/* Pop shadow stack by 1 frame.  */
+	xorl %ecx, %ecx
+	rdsspd %ecx
+	testl %ecx, %ecx
+	jz 1f
+	movl $1, %ecx
+	incsspd %ecx
+1:
+#endif
         popl %esi
         movl %ebp,%esp
         popl %ebp
@@ -174,6 +195,7 @@ FFI_HIDDEN (ffi_closure_SYSV)
 
 ffi_closure_SYSV:
 .LFB2:
+	_CET_ENDBR
 	pushl	%ebp
 .LCFI2:
 	movl	%esp, %ebp
@@ -279,6 +301,7 @@ FFI_HIDDEN (ffi_closure_raw_SYSV)
 
 ffi_closure_raw_SYSV:
 .LFB3:
+	_CET_ENDBR
 	pushl	%ebp
 .LCFI4:
 	movl	%esp, %ebp

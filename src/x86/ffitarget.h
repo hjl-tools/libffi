@@ -135,5 +135,14 @@ typedef enum ffi_abi {
 # define FFI_NATIVE_RAW_API 1  /* x86 has native raw api support */
 #endif
 
+#if !defined(GENERATE_LIBFFI_MAP) && defined(__ASSEMBLER__) \
+    && defined(__CET__)
+# include <cet.h>
+# define _CET_NOTRACK notrack
+#else
+# define _CET_ENDBR
+# define _CET_NOTRACK
+#endif
+
 #endif
 

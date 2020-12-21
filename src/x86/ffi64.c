@@ -27,6 +27,10 @@
    DEALINGS IN THE SOFTWARE.
    ----------------------------------------------------------------------- */
 
+#if defined __linux__ && !defined _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
+
 #include <ffi.h>
 #include <ffi_common.h>
 
@@ -552,6 +556,10 @@ ffi_call_go (ffi_cif *cif, void (*fn)(void), void *rvalue,
 extern void ffi_closure_unix64(void) FFI_HIDDEN;
 extern void ffi_closure_unix64_sse(void) FFI_HIDDEN;
 
+#if FFI_EXEC_TRAMPOLINE_TABLE
+#include "tramoline-table.h"
+#endif
+
 ffi_status
 ffi_prep_closure_loc (ffi_closure* closure,
 		      ffi_cif* cif,
@@ -559,6 +567,7 @@ ffi_prep_closure_loc (ffi_closure* closure,
 		      void *user_data,
 		      void *codeloc)
 {
+#if !FFI_EXEC_TRAMPOLINE_TABLE
   static const unsigned char trampoline[16] = {
     /* leaq  -0x7(%rip),%r10   # 0x0  */
     0x4c, 0x8d, 0x15, 0xf9, 0xff, 0xff, 0xff,
@@ -567,6 +576,7 @@ ffi_prep_closure_loc (ffi_closure* closure,
     /* nopl  (%rax) */
     0x0f, 0x1f, 0x00
   };
+#endif
   void (*dest)(void);
 
   if (cif->abi != FFI_UNIX64)
@@ -577,8 +587,16 @@ ffi_prep_closure_loc (ffi_closure* closure,
   else
     dest = ffi_closure_unix64;
 
+#if FFI_EXEC_TRAMPOLINE_TABLE
+  /* NB: Use uint64_t so that the slot size in the config page is always
+     8 bytes for both x32 and x86-64.  */
+  uint64_t *config = (uint64_t *) FFI_TRAMPOLINE_CODELOC_CONFIG(codeloc);
+  config[0] = (uintptr_t) closure;
+  config[1] = (uintptr_t) dest;
+#else
   memcpy (closure->tramp, trampoline, sizeof(trampoline));
   *(UINT64 *)(closure->tramp + 16) = (uintptr_t)dest;
+#endif
 
   closure->cif = cif;
   closure->fun = fun;

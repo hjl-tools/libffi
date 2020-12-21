@@ -34,6 +34,10 @@
 #include <windows.h>
 #endif
 
+#if defined __linux__ && !defined _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
+
 #include <ffi.h>
 #include <ffi_common.h>
 
@@ -578,6 +582,9 @@ ffi_prep_incoming_args_SYSV(char *stack, void **rvalue, void **avalue,
   return;
 }
 
+#if FFI_EXEC_TRAMPOLINE_TABLE
+#include "tramoline-table.h"
+#else
 #define FFI_INIT_TRAMPOLINE_WIN64(TRAMP,FUN,CTX,MASK) \
 { unsigned char *__tramp = (unsigned char*)(TRAMP); \
    void*  __fun = (void*)(FUN); \
@@ -646,6 +653,7 @@ ffi_prep_incoming_args_SYSV(char *stack, void **rvalue, void **avalue,
    *(unsigned char *)  &__tramp[5] = 0xe8; \
    *(unsigned int*)  &__tramp[6] = __dis; /* call __fun  */ \
  }
+#endif
 
 /* the cif must already be prep'ed */
 
@@ -656,6 +664,28 @@ ffi_prep_closure_loc (ffi_closure* closure,
                       void *user_data,
                       void *codeloc)
 {
+#if FFI_EXEC_TRAMPOLINE_TABLE
+  void (*dest)(void);
+
+  switch (cif->abi)
+    {
+    case FFI_FASTCALL:
+      return FFI_BAD_ABI;
+    case FFI_SYSV:
+    case FFI_THISCALL:
+      dest = (void (*)(void)) ffi_closure_SYSV;
+      break;
+    case FFI_STDCALL:
+      dest = (void (*)(void)) ffi_closure_STDCALL;
+      break;
+    default:
+      return FFI_BAD_ABI;
+    }
+
+  uint32_t *config = (uint32_t *) FFI_TRAMPOLINE_CODELOC_CONFIG(codeloc);
+  config[0] = (uintptr_t) closure;
+  config[1] = (uintptr_t) dest;
+#else
 #ifdef X86_WIN64
 #define ISFLOAT(IDX) (cif->arg_types[IDX]->type == FFI_TYPE_FLOAT || cif->arg_types[IDX]->type == FFI_TYPE_DOUBLE)
 #define FLAG(IDX) (cif->nargs>(IDX)&&ISFLOAT(IDX)?(1<<(IDX)):0)
@@ -705,6 +735,7 @@ ffi_prep_closure_loc (ffi_closure* closure,
     {
       return FFI_BAD_ABI;
     }
+#endif
     
   closure->cif  = cif;
   closure->user_data = user_data;
@@ -744,6 +775,11 @@ ffi_prep_raw_closure_loc (ffi_raw_closure* closure,
       FFI_ASSERT (cif->arg_types[i]->type != FFI_TYPE_LONGDOUBLE);
     }
   
+#if FFI_EXEC_TRAMPOLINE_TABLE
+  uint32_t *config = (uint32_t *) FFI_TRAMPOLINE_CODELOC_CONFIG(codeloc);
+  config[0] = (uintptr_t) closure;
+  config[1] = (uintptr_t) ffi_closure_raw_SYSV;
+#else
 #ifdef X86_WIN32
   if (cif->abi == FFI_SYSV)
     {
@@ -756,6 +792,7 @@ ffi_prep_raw_closure_loc (ffi_raw_closure* closure,
     {
       FFI_INIT_TRAMPOLINE_RAW_THISCALL (&closure->tramp[0], &ffi_closure_raw_THISCALL, codeloc, cif->bytes);
     }
+#endif
 #endif
   closure->cif  = cif;
   closure->user_data = user_data;

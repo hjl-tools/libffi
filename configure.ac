@@ -448,12 +448,25 @@ if test "x$sys_symbol_underscore" = xyes; then
 fi
 
 FFI_EXEC_TRAMPOLINE_TABLE=0
+FFI_EXEC_TRAMPOLINE_TABLE_COMPAT_CLOSURE=0
 case "$target" in
      *arm*-apple-darwin*)
        FFI_EXEC_TRAMPOLINE_TABLE=1
        AC_DEFINE(FFI_EXEC_TRAMPOLINE_TABLE, 1,
                  [Cannot use PROT_EXEC on this target, so, we revert to
                    alternative means])
+     ;;
+     i?86-*-linux* | x86_64-*-linux*)
+       echo 'int cet = __CET__;' > conftest.c
+       if $CC $CFLAGS -c -o conftest.o conftest.c > /dev/null 2>&1; then
+	 FFI_EXEC_TRAMPOLINE_TABLE=1
+	 FFI_EXEC_TRAMPOLINE_TABLE_COMPAT_CLOSURE=1
+	 AC_DEFINE(FFI_EXEC_TRAMPOLINE_TABLE, 1,
+		   [Use trampoline page on CET enabled Linux/x86])
+	 AC_DEFINE(FFI_EXEC_TRAMPOLINE_TABLE_COMPAT_CLOSURE, 1,
+		   [Use trampoline page with compatible closure on CET enabled Linux/x86])
+       fi
+       rm -f conftest.*
      ;;
      *-apple-darwin1* | *-*-freebsd* | *-*-kfreebsd* | *-*-openbsd* | *-pc-solaris*)
        AC_DEFINE(FFI_MMAP_EXEC_WRIT, 1,
@@ -463,6 +476,7 @@ case "$target" in
 esac
 AM_CONDITIONAL(FFI_EXEC_TRAMPOLINE_TABLE, test x$FFI_EXEC_TRAMPOLINE_TABLE = x1)
 AC_SUBST(FFI_EXEC_TRAMPOLINE_TABLE)
+AC_SUBST(FFI_EXEC_TRAMPOLINE_TABLE_COMPAT_CLOSURE)
 
 if test x$TARGET = xX86_64; then
     AC_CACHE_CHECK([toolchain supports unwind section type],

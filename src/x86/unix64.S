@@ -288,9 +288,15 @@ ffi_closure_unix64:
 	movq    %r8,  ffi_closure_OFS_G+0x20(%rsp)
 	movq    %r9,  ffi_closure_OFS_G+0x28(%rsp)
 
+#ifdef __ILP32__
+	movl	24(%r10), %edi				/* Load cif */
+	movl	28(%r10), %esi				/* Load fun */
+	movl	32(%r10), %edx				/* Load user_data */
+#else
 	movq	24(%r10), %rdi				/* Load cif */
 	movq	32(%r10), %rsi				/* Load fun */
 	movq	40(%r10), %rdx				/* Load user_data */
+#endif
 .Ldo_closure:
 	leaq	ffi_closure_OFS_RVALUE(%rsp), %rcx	/* Load rvalue */
 	movq	%rsp, %r8				/* Load reg_args */
@@ -432,9 +438,15 @@ ffi_go_closure_unix64:
 	movq    %r8,  ffi_closure_OFS_G+0x20(%rsp)
 	movq    %r9,  ffi_closure_OFS_G+0x28(%rsp)
 
+#ifdef __ILP32__
+	movl	4(%r10), %edi		/* Load cif */
+	movl	8(%r10), %esi		/* Load fun */
+	movl	%r10d, %edx		/* Load closure (user_data) */
+#else
 	movq	8(%r10), %rdi		/* Load cif */
 	movq	16(%r10), %rsi		/* Load fun */
 	movq	%r10, %rdx		/* Load closure (user_data) */
+#endif
 	jmp	.Ldo_closure
 
 	cfi_endproc

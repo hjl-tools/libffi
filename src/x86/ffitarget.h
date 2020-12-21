@@ -144,5 +144,14 @@ typedef enum ffi_abi {
 # define _CET_NOTRACK
 #endif
 
+#ifdef __CET__
+# define FFI_EXEC_TRAMPOLINE_TABLE_PAGE_SIZE 4096
+# ifdef __x86_64__
+#  define FFI_EXEC_TRAMPOLINE_TABLE_TRAMPOLINE_SIZE 17
+# else
+#  define FFI_EXEC_TRAMPOLINE_TABLE_TRAMPOLINE_SIZE 21
+# endif
+#endif
+
 #endif
 

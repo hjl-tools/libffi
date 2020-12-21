@@ -29,6 +29,11 @@
    ----------------------------------------------------------------------- */
 
 #ifndef __x86_64__
+
+#if defined __linux__ && !defined _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
+
 #include <ffi.h>
 #include <ffi_common.h>
 #include <stdlib.h>
@@ -496,6 +501,10 @@ ffi_closure_inner (struct closure_frame *frame, char *stack)
     return flags;
 }
 
+#if FFI_EXEC_TRAMPOLINE_TABLE
+#include "tramoline-table.h"
+#endif
+
 ffi_status
 ffi_prep_closure_loc (ffi_closure* closure,
                       ffi_cif* cif,
@@ -503,15 +512,20 @@ ffi_prep_closure_loc (ffi_closure* closure,
                       void *user_data,
                       void *codeloc)
 {
+#if !FFI_EXEC_TRAMPOLINE_TABLE
   char *tramp = closure->tramp;
-  void (*dest)(void);
   int op = 0xb8;  /* movl imm, %eax */
+#endif
+  void (*dest)(void);
 
   switch (cif->abi)
     {
+    case FFI_FASTCALL:
+#if FFI_EXEC_TRAMPOLINE_TABLE
+      return FFI_BAD_ABI;
+#endif
     case FFI_SYSV:
     case FFI_THISCALL:
-    case FFI_FASTCALL:
     case FFI_MS_CDECL:
       dest = ffi_closure_i386;
       break;
@@ -520,12 +534,21 @@ ffi_prep_closure_loc (ffi_closure* closure,
       dest = ffi_closure_STDCALL;
       break;
     case FFI_REGISTER:
+#if FFI_EXEC_TRAMPOLINE_TABLE
+      return FFI_BAD_ABI;
+#else
       dest = ffi_closure_REGISTER;
       op = 0x68;  /* pushl imm */
+#endif
     default:
       return FFI_BAD_ABI;
     }
 
+#if FFI_EXEC_TRAMPOLINE_TABLE
+  uint32_t *config = (uint32_t *) FFI_TRAMPOLINE_CODELOC_CONFIG(codeloc);
+  config[0] = (uintptr_t) closure;
+  config[1] = (uintptr_t) dest;
+#else
   /* movl or pushl immediate.  */
   tramp[0] = op;
   *(void **)(tramp + 1) = codeloc;
@@ -533,6 +556,7 @@ ffi_prep_closure_loc (ffi_closure* closure,
   /* jmp dest */
   tramp[5] = 0xe9;
   *(unsigned *)(tramp + 6) = (unsigned)dest - ((unsigned)codeloc + 10);
+#endif
 
   closure->cif = cif;
   closure->fun = fun;
@@ -557,8 +581,11 @@ ffi_prep_go_closure (ffi_go_closure* closure, ffi_cif* cif,
     case FFI_MS_CDECL:
       dest = ffi_go_closure_ECX;
       break;
-    case FFI_THISCALL:
     case FFI_FASTCALL:
+#if FFI_EXEC_TRAMPOLINE_TABLE
+      return FFI_BAD_ABI;
+#endif
+    case FFI_THISCALL:
       dest = ffi_go_closure_EAX;
       break;
     case FFI_STDCALL:
@@ -591,7 +618,9 @@ ffi_prep_raw_closure_loc (ffi_raw_closure *closure,
                           void *user_data,
                           void *codeloc)
 {
+#if !FFI_EXEC_TRAMPOLINE_TABLE
   char *tramp = closure->tramp;
+#endif
   void (*dest)(void);
   int i;
 
@@ -619,6 +648,11 @@ ffi_prep_raw_closure_loc (ffi_raw_closure *closure,
       return FFI_BAD_ABI;
     }
 
+#if FFI_EXEC_TRAMPOLINE_TABLE
+  uint32_t *config = (uint32_t *) FFI_TRAMPOLINE_CODELOC_CONFIG(codeloc);
+  config[0] = (uintptr_t) closure;
+  config[1] = (uintptr_t) dest;
+#else
   /* movl imm, %eax.  */
   tramp[0] = 0xb8;
   *(void **)(tramp + 1) = codeloc;
@@ -626,6 +660,7 @@ ffi_prep_raw_closure_loc (ffi_raw_closure *closure,
   /* jmp dest */
   tramp[5] = 0xe9;
   *(unsigned *)(tramp + 6) = (unsigned)dest - ((unsigned)codeloc + 10);
+#endif
 
   closure->cif = cif;
   closure->fun = fun;

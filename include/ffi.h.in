@@ -313,8 +313,18 @@ __declspec(align(8))
 #endif
 typedef struct {
 #if @FFI_EXEC_TRAMPOLINE_TABLE@
+# if @FFI_EXEC_TRAMPOLINE_TABLE_COMPAT_CLOSURE@
+  union {
+    struct {
+      void *trampoline_table;
+      void *trampoline_table_entry;
+    };
+    char tramp[FFI_TRAMPOLINE_SIZE];
+  };
+# else
   void *trampoline_table;
   void *trampoline_table_entry;
+# endif
 #else
   char tramp[FFI_TRAMPOLINE_SIZE];
 #endif
